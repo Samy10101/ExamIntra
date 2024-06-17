@@ -1,0 +1,147 @@
+---
+title: "Intra"
+author: "By Jean Samy François et Israel Jean François"
+output: 
+  flexdashboard::flex_dashboard:
+  flexdashboard::valueBox():
+   orientation: rows
+   source_code: embed
+   vertical_layout: fill
+   runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(plotly)
+library(rvest)
+library(XML)
+library(ggplot2)
+library(shiny)
+library(DT)
+```
+
+```{r}
+#############Importation de donnees###################
+Taux<-read_html("https://www.brh.ht/taux-du-jour/")
+tables<-Taux%>%html_table(fill=TRUE)
+Table1<-tables[[1]]
+
+Taux<-read_html("https://www.brh.ht/taux-affiches-par-les-banques-et-les-agents-de-change-2/")
+tables<-Taux%>%html_table(fill=TRUE)
+Table2<-tables[[1]]
+
+
+
+############Manipulation de donnees#############
+####Transformation des tables en data frame 
+Table1<-data.frame(Table1)
+Table2<-data.frame(Table2)
+Table2<-Table2%>%rename(Banques='Var.1')
+Table2<-Table2[-c(8:11),-c(2)]
+sj<-Table1[1,]
+```
+
+
+ 
+Taux de Change {data-vertical_layout=fill}
+=======================================================
+
+Column {.sidebar data-width=250}
+----------------------------------------------------------------
+
+```{r box}
+update_day<-Table1%>%
+  select(Achats,Ventes,Spread)%>%table()
+update_day<-Table2%>%
+  select(Achat,Vente,Spread)
+```
+
+
+```{r}
+selectInput("Table2", label = "Taux de change", 
+            choices =c("BNC","BUH","CAPITAL BANK","CITYBANK","UNIBANK","SOGEBANK","SOGEBEL"), selected = "BUH")
+```
+
+
+
+Row {data-height=500}
+---------------------------------------------------------------
+
+### Taux a l'achat
+
+```{r}
+ggplot(data=Table2,aes(x=Banques,y= Achat))+
+  geom_point(size=2,color='skyblue')+
+  theme(axis.text.x= element_text(size=20,angle=90))+
+  theme_gray()
+```
+
+
+Row {data-height=500}
+---------------------------------------------------------------
+
+
+### Taux a la vente
+
+```{r}
+
+f<-plot_ly(Table2,x=~Banques,y=~Vente,type="bar",marker=list(color="gold"))
+f<-layout(f,yaxis=list(range=c(130,135)))
+f<-add_trace(f,x=~Banques,y=~Vente,type="bar",marker=list(color="aquamarine")) 
+f
+```
+
+Meilleur taux pour un arbitrage {data-vertical_layout=fill}
+=======================================================
+
+Column {.sidebar data-width=250}
+------------------------------------------------------------------
+
+ 
+Dans le Graphe du meilleur taux pour un arbitrage, nous avons fais un rapprochement entre le taux à l'achat  et le spread ce qui résulte en un affichage du taux à la vente.
+Par rapport à ce graphique, un arbitragiste en possession du dollar américain (USD) peut déterminer laquelle des banques affiche le meilleur taux pour réaliser un meilleur bénéfice en raison des marges entre achat et vente lors de l’arbitrage.
+
+
+Row {data-height=500}
+---------------------------------------------------------------
+
+### MEILLEUR TAUX POUR UN ARBITRAGE
+
+
+```{r}
+ggplot(data=Table2,aes(x=Banques, y=Spread))+
+  geom_col(color="skyblue",size=5)+
+  theme(axis.text.x= element_text(size=10,angle=90))+
+  scale_y_continuous(labels=NULL, breaks=seq(130,135,1))+
+  labs(x="Banques", y="Arbitrages Possibles")+
+  geom_point(color="orange",size=3)+
+  geom_text(aes(label=Vente),vjust=-0.5,hjust=0,nudge_x=-0.2)
+```
+
+comparaison de taux {data-vertical_layout=scroll}
+=====================================
+
+Column {.sidebar data-width=250}
+----------------------------------------------------------------
+
+
+*** Pour déterminer les banques ayant les taux les plus élevés et celles ayant les taux les plus bas il suffit de cliquer sur les petites flèches qui sont à coté d'achat de vente et de spread dans le tableau. On peut aussi les visualiser et les comparer avec ceux du marché informel.
+
+
+Row {data-height=500}
+----------------------------------------------------------------
+
+### Table 1-selected data
+```{r}
+renderDT(sj)
+```
+
+Row {data-height=500}
+----------------------------------------------------------------
+
+### Table 2-selected data 
+
+```{r}
+renderDT(Table2)
+```
+
